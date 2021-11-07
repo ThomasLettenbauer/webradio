@@ -1,5 +1,6 @@
 import asyncio, evdev
 import alsaaudio
+import RPi.GPIO as GPIO
 from mpg123 import Mpg123, Out123
 import time
 import os
@@ -14,7 +15,7 @@ client = MPDClient();
 client.connect("localhost", 6600);
 
 volume_dial = evdev.InputDevice('/dev/input/by-path/platform-rotary@5-event')
-station_dial = evdev.InputDevice('/dev/input/by-path/platform-rotary@11-event')
+station_dial = evdev.InputDevice('/dev/input/by-path/platform-rotary@16-event')
 
 try:
     volume = int(client.status()["volume"]);
@@ -27,7 +28,35 @@ client.setvol(volume)
 m.setvolume(volume + 10) # Set audio for tts output
 
 station = 0
-station_num = 4
+station_num = 5
+
+LED_A = 23
+LED_B = 24
+
+# initialize GPIO for LEDs
+def led_init():
+    GPIO.setwarnings(True)
+    GPIO.setmode(GPIO.BCM)  # Use BCM mode
+    
+    # define the LED outputs
+    GPIO.setup(LED_A, GPIO.OUT) 
+    GPIO.setup(LED_B, GPIO.OUT)
+
+    # LEDs off per default
+    GPIO.output(LED_A, GPIO.LOW)
+    GPIO.output(LED_B, GPIO.LOW)
+    
+    return
+
+# Switch LEDs On
+def led_on():
+    GPIO.output(LED_A, GPIO.HIGH)
+    GPIO.output(LED_B, GPIO.HIGH)
+
+# Switch LEDs Off
+def led_off():
+    GPIO.output(LED_A, GPIO.LOW)
+    GPIO.output(LED_B, GPIO.LOW)
 
 # say the station name
 def say_station(station):
@@ -97,8 +126,14 @@ async def process_events(device):
             while device.read_one() != None:
                             pass
 
+
+led_init()
+led_on()
+
 say_station(station)
 client.play(station)
+
+
 
 for device in volume_dial, station_dial:
     asyncio.ensure_future(process_events(device))
